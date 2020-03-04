@@ -8,52 +8,53 @@ password = getpass.getpass('password :')
 Devicelist = [']
 def replace_element(YOUR_LIST,set_to='NOT IN USE'):
         return[i if username not in i else set_to for i in YOUR_LIST]
+with open('output.csv','w') as csvfile:
+        writer=csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        writer.writerow(['Device', 'Virtual Server','Profiles','tls Vesion'])
+              
+        for device in Devicelist:
+                connection = netmiko.ConnectHandler(ip=device, device_type='f5_ltm',username=username,password=password,global_delay_factor=3)
+                connection.send_command_timing ('modify cli preference pager disabled')
+                print('connection successful')
+                cmd =["list ltm virtual | grep 443"]
 
-
-f=("f5output.txt","a")
-for device in Devicelist:
-        connection = netmiko.ConnectHandler(ip=device, device_type='f5_ltm',username=username,password=password,global_delay_factor=3)
-        connection.send_command_timing ('modify cli preference pager disabled')
-        print('connection successful')
-        cmd =["list ltm virtual | grep 443"]
-
-        print('working on : ' + str(cmd))
-        outputvirtualserver  = connection.send_command_timing ("list ltm virtual | grep 443")
-        output=outputvirtualserver.strip().splitlines()
-        virtualserver=[]
-        for index in range(len(output)):
-                if'ltm virtual'in output[index]:
-                        options=((output[index]).replace('{',''))
-                        virtual=options.replace(' {','')
-                        virtualserver.append(virtual)
-                        virt =virtual.encode("utf-8")
-                        virt =virtual.encode('ascii', 'ignore')
-        print(virtualserver)
-        print(len(virtualserver))
-        ltmprofile=[]
-        for line in virtualserver:
-                cmd='list '+line
                 print('working on : ' + str(cmd))
-                options=connection.send_command_timing(cmd)
-                output=options.strip().splitlines()
+                outputvirtualserver  = connection.send_command_timing ("list ltm virtual | grep 443")
+                output=outputvirtualserver.strip().splitlines()
+                virtualserver=[]
                 for index in range(len(output)):
-                        if'profiles'in output[index]:
-                                clientssl=((output[index+1]).replace(' ',''))
-                                ltmprof = clientssl.replace('{','')
-                                ltmprofile.append(ltmprof)
+                        if'ltm virtual'in output[index]:
+                                options=((output[index]).replace('{',''))
+                                virtual=options.replace(' {','')
+                                virtualserver.append(virtual)
+                print(virtualserver)
+                print(len(virtualserver))
+                ltmprofile=[]
+                for line in virtualserver:
+                        cmd='list '+line
+                        print('working on : ' + str(cmd))
+                        options=connection.send_command_timing(cmd)
+                        output=options.strip().splitlines()
+                        for index in range(len(output)):
+                                if'profiles'in output[index]:
+                                        clientssl=((output[index+1]).replace(' ',''))
+                                        ltmprof = clientssl.replace('{','')
+                                        ltmprofile.append(ltmprof)
+                                        break
+                print(ltmprofile)
+                print(len(ltmprofile))
+                tlsvoptions=[]
+                for line in ltmprofile:
+                        cmd='list ltm profile client-ssl '+line+ ' | grep options'
+                        print('working on : ' + str(cmd))
+                        finaloutput=connection.send_command_timing(cmd)
+                        output=finaloutput.strip().splitlines()
+                        for index in range(len(output)):
+                                options=output[0]
+                                tlsvoptions.append(options)
                                 break
-        print(ltmprofile)
-        print(len(ltmprofile))
-        tlsvoptions=[]
-        for line in ltmprofile:
-                cmd='list ltm profile client-ssl '+line+ ' | grep options'
-                print('working on : ' + str(cmd))
-                finaloutput=connection.send_command_timing(cmd)
-                output=finaloutput.strip().splitlines()
-                for index in range(len(output)):
-                        options=output[0]
-                        tlsvoptions.append(options)
-                        break
-        tlsvoption=(replace_element(tlsvoptions))
-        print(tlsvoption)
+                tlsvoption=(replace_element(tlsvoptions))
+                print(tlsvoption)
+                for i in range (0,len(virtualserver)):
+                        writer.writerow([device, virtualserver[i],ltmprofile[i],tlsvoption[i]])
 print ('completed Successfully')
