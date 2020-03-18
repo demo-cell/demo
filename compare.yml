@@ -1,0 +1,32 @@
+---
+
+- name: Backup show version and other user level commands
+  hosts: set1
+  gather_facts: false
+  connection: local
+
+  tasks:
+    - name: run multiple commands on remote nodes
+      ios_command:
+        authorize: yes
+        auth_pass: cisco
+        commands:
+          - show running-config
+      register: Firstoutput
+
+    
+
+- name: Backup show version and other user level commands
+  hosts: set2
+  gather_facts: false
+  connection: local
+
+  tasks:
+    - name: run multiple commandsa on remote nodes
+      ios_command:
+        authorize: yes
+        auth_pass: cisco
+        commands:
+          - show running-config
+
+      register: secondoutput
